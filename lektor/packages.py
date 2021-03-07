@@ -9,6 +9,7 @@ import click
 import pkg_resources
 import requests
 
+from lektor.builder import FileInfo
 from lektor.utils import portable_popen
 
 
@@ -177,6 +178,12 @@ def list_local_packages(path):
     return rv
 
 
+def hash_directory(path) -> str:
+    """Compute a checksum for a directory."""
+    file_info = FileInfo(None, path)
+    return file_info.checksum
+
+
 def update_cache(package_root, remote_packages, local_package_path, refresh=False):
     """Updates the package cache at package_root for the given dictionary
     of packages as well as packages in the given local package path.
@@ -207,6 +214,8 @@ def update_cache(package_root, remote_packages, local_package_path, refresh=Fals
     for package in local_packages:
         old_manifest.pop(package, False)
         # TODO: only install local package if necessary.
+        # path = os.path.join(local_package_path, package[1:])
+        # checksum = hash_directory(path)
         to_install.append((package, None))
 
     # Bad news, we need to wipe everything
