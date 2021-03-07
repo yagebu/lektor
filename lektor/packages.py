@@ -143,7 +143,7 @@ def load_manifest(filename):
     try:
         with open(filename) as f:
             for line in f:
-                if line[:1] == "@":
+                if line[:1] == "@" and "=" not in line:
                     rv[line.strip()] = None
                     continue
                 line = line.strip().split("=", 1)
@@ -160,7 +160,7 @@ def load_manifest(filename):
 def write_manifest(filename, packages):
     with open(filename, "w") as f:
         for package, version in sorted(packages.items()):
-            if package[:1] == "@":
+            if version is None:
                 f.write(f"{package}\n")
             else:
                 f.write(f"{package}={version}\n")
@@ -200,7 +200,6 @@ def update_cache(package_root, remote_packages, local_package_path, refresh=Fals
     to_install = []
 
     all_packages = dict(remote_packages)
-    all_packages.update((x, None) for x in local_packages)
 
     # step 1: figure out which remote packages to install.
     for package, version in remote_packages.items():
@@ -212,11 +211,14 @@ def update_cache(package_root, remote_packages, local_package_path, refresh=Fals
 
     # step 2: figure out which local packages to install
     for package in local_packages:
-        old_manifest.pop(package, False)
-        # TODO: only install local package if necessary.
-        # path = os.path.join(local_package_path, package[1:])
-        # checksum = hash_directory(path)
-        to_install.append((package, None))
+        old_checksum = old_manifest.pop(package, None)
+        path = os.path.join(local_package_path, package[1:])
+        checksum = hash_directory(path)
+        all_packages[package] = checksum
+        if old_checksum is None:
+            to_install.append((package, None))
+        elif old_checksum != checksum:
+            requires_wipe = True
 
     # Bad news, we need to wipe everything
     if requires_wipe or old_manifest:
